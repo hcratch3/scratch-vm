@@ -1,8 +1,8 @@
 ## scratch-vm (modded)
 
-See my fork of [scratch-gui](https://github.com/SheepTester/scratch-gui) for more info
+See my fork of [hcratch3.github.io](https://github.com/hcratch3/hcratch3.github.io) for more info
 
-The `vanilla-vm-min` branch is for generating a vanilla (ie unmodded) minified JS file that makes Scratch VM usable as a classic JS library (used for the [HTMLifer](https://sheeptester.github.io/words-go-here/htmlifier/))
+The `vanilla-vm-min` branch is for generating a vanilla (ie unmodded) minified JS file that makes Scratch VM usable as a classic JS library (used for the [HTMLifer](https://hcratch3.github.io/words-go-here/htmlifier/))
 
 ---
 
