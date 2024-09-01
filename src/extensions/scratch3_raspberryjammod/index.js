@@ -34,8 +34,8 @@ class Scratch3MicrammingBlocks {
 
     getInfo() {
         return {
-            id: 'minecraft',
-            name: 'Minecraft',
+            id: 'raspberryjammod',
+            name: 'RaspberryJamMod',
             blockIconURI: blockIconURI,
             blocks: [
                 // Command
