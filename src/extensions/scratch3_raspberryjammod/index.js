@@ -1,8 +1,12 @@
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
+const Cast = require('../../util/cast');
+const log = require('../../util/log');
 const formatMessage = require('format-message');
-const nets = require('nets');
-
+const BlockInfo = require('./block_info');
+const EntityInfo = require('./entity_info');
+const ParticleInfo = require('./particle_info');
+const Enchants = require('./enchant_info');
 
 const EXTENSION_NAME = {
 	'ja'     : 'RaspberryJamMod',
@@ -15,1558 +19,1228 @@ const blockIconURI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfcAAAFOCAYA
 
 class Scratch3MicrammingBlocks {
 
-	static get EXTENSION_ID () {
-		return 'RaspberryJamMod';
-	}
+    constructor(runtime) {
+        this.runtime = runtime;
 
-	constructor (runtime) {
-		this._locale = this._setLocale();
-		this.runtime = runtime;
-		this._my_rtn="";
-		this.r_status  = "0";
-		this._world = new MicraWorld(true, this._locale);
-	}
- 
-	getInfo () {
-		this._locale = this._setLocale();
-		this._world._locale = this._locale;
+        this.host = 'localhost';
+        this.ws = this._createWebSocket();
+        this.latestExecuteTime = Date.now();
 
-	 	return {
-			id: Scratch3MicrammingBlocks.EXTENSION_ID,
-			name: EXTENSION_NAME[this._locale],
-			blockIconURI: blockIconURI,
-			blocks: [
-				{
-					opcode: 'SetMode',
-					text: FormSetMode[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						MODE: {
-							type: ArgumentType.STRING,
-							menu: 'mode',
-							defaultValue: MENU_MODE[this._locale][0].text,
-							description: 'Mode'
-						}
-					}
-				},
-				{
-					opcode: 'status',
-					blockType: BlockType.REPORTER,
-					text: FormStatusText[this._locale]
-				},
-				{
-					opcode: 'Chat',
-					text: FormChat[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						MSG: {
-							type: ArgumentType.STRING,
-							defaultValue: FormChatMsgDefault[this._locale],
-							description: 'Chat Message'
-						}
-					}
-				},
-				{
-					opcode: 'block_NameToID',
-					blockType: BlockType.REPORTER,
-					text: '[BlockName]',
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							menu: 'blocks',
-							defaultValue: MENU_BLOCKS[this._locale][1],
-							description: 'Block Name'
-						}
-					}
-				},
-				{
-					opcode: 'red_NameToID',
-					blockType: BlockType.REPORTER,
-					text: '[BlockName]',
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							menu: 'reds',
-							defaultValue: MENU_REDS[this._locale][5],
-							description: 'Block Name'
-						}
-					}
-				},
-				{
-					opcode: 'deco_NameToID',
-					blockType: BlockType.REPORTER,
-					text: '[BlockName]',
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							menu: 'decos',
-							defaultValue: MENU_DECOS[this._locale][5],
-							description: 'Block Name'
-						}
-					}
-				},
-				{
-					opcode: 'wool_NameToID',
-					blockType: BlockType.REPORTER,
-					text: '[BlockName]',
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							menu: 'wools',
-							defaultValue: MENU_WOOLS[this._locale][0],
-							description: 'Block Name'
-						}
-					}
-				},
-				{
-					opcode: 'sglass_NameToID',
-					blockType: BlockType.REPORTER,
-					text: '[BlockName]',
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							menu: 'sglasss',
-							defaultValue: MENU_SGLASSS[this._locale][0],
-							description: 'Block Name'
-						}
-					}
-				},
-				{
-					opcode: 'carpet_NameToID',
-					blockType: BlockType.REPORTER,
-					text: '[BlockName]',
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							menu: 'carpets',
-							defaultValue: MENU_CARPETS[this._locale][0],
-							description: 'Block Name'
-						}
-					}
-				},
-				{
-					opcode: 'pre_setBlockData',
-					text: FormPreSetBlockIdData[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							defaultValue: MENU_BLOCKS[this._locale][1],
-							description: 'Block Name'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						}
-					}
-				},
-				{
-					opcode: 'pre_drawLine',
-					text: FormPreDrawLine[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							defaultValue: MENU_BLOCKS[this._locale][1],
-							description: 'Block Name'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						X1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X1'
-						},
-						Y1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y1'
-						},
-						Z1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Coordinate Z1'
-						}
-					}
-				},
-				{
-					opcode: 'pre_setBlocks',
-					text: FormPreSetBlocks[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							defaultValue: MENU_BLOCKS[this._locale][1],
-							description: 'Block Name'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						X1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X1'
-						},
-						Y1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y1'
-						},
-						Z1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Coordinate Z1'
-						}
-					}
-				},
-				{
-					opcode: 'pre_drawText',
-					text: FormPreDrawText[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							defaultValue: MENU_BLOCKS[this._locale][1],
-							description: 'Block Name'
-						},
-						Text: {
-							type: ArgumentType.STRING,
-							defaultValue: 'Great!',
-							description: 'drawn text'
-						},
-						BlockName1: {
-							type: ArgumentType.STRING,
-							defaultValue: MENU_BLOCKS[this._locale][0],
-							description: 'Block Name'
-						},
-						Font: {
-							type: ArgumentType.STRING,
-							menu: 'font',
-							defaultValue: MENU_FONTS[0],
-							description: 'Font Name'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						}
-					}
-				},
-				{
-					opcode: 'pre_drawCircle',
-					text: FormPreDrawCircle[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							defaultValue: MENU_BLOCKS[this._locale][1],
-							description: 'Block Name'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						},
-						FR: {
-							type: ArgumentType.STRING,
-							menu: 'yesno',
-							defaultValue: MENU_YESNO[this._locale][0].text,
-							description: 'Whether fill up'
-						}
-					}
-				},
-				{
-					opcode: 'Teleport',
-					text: FormTeleport[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						}
-					}
-				},
-				{
-					opcode: 'setPlayerRotPit',
-					text: FormSetPlayerRotPit[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						}
-					}
-				},
-				{
-					opcode: 'setPen',
-					blockType: BlockType.COMMAND,
-					text: FormSetPen[this._locale],
-					arguments: {
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Pit: {
-							type: ArgumentType.STRING,
-							menu: 'pitches',
-							defaultValue: MENU_PITCH[this._locale][2].text,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.STRING,
-							menu: 'rotations',
-							defaultValue: MENU_ROT[this._locale][4].text,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'downPen',
-					blockType: BlockType.COMMAND,
-					text: FormDownPen[this._locale],
-					arguments: {
-						BlockName: {
-							type: ArgumentType.STRING,
-							defaultValue: MENU_BLOCKS[this._locale][1],
-							description: 'Block Name'
-						}
-					}
-				},
-				{
-					opcode: 'strokePen',
-					text: FormStrokePen[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						Length: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'distance'
-						}
-					}
-				},
-				{
-					opcode: 'turnPen',
-					blockType: BlockType.COMMAND,
-					text: FormTurnPen[this._locale],
-					arguments: {
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 30,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'upPen',
-					blockType: BlockType.COMMAND,
-					text: FormUpPen[this._locale]
-				},
-				{
-					opcode: 'ResetHere',
-					blockType: BlockType.COMMAND,
-					text: FormResetHere[this._locale]
-				},
-				{
-					opcode: 'Reset',
-					blockType: BlockType.COMMAND,
-					text: FormReset[this._locale]
-				},
-				{
-					opcode: 'getBlockInfo',
-					blockType: BlockType.COMMAND,
-					text: FormGetBlockInfo[this._locale],
-					arguments: {
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						}
-					}
-				},
-				{
-					opcode: 'blockId',
-					blockType: BlockType.REPORTER,
-					text: FormBlockIdText[this._locale]
-				},
-				{
-					opcode: 'blockData',
-					blockType: BlockType.REPORTER,
-					text: FormBlockDataText[this._locale]
-				},
-				{
-					opcode: 'getPlayerPos',
-					blockType: BlockType.COMMAND,
-					text: FormGetPlayerPos[this._locale]
-				},
-				{
-					opcode: 'pos_x',
-					blockType: BlockType.REPORTER,
-					text: FormPos_XText[this._locale]
-				},
-				{
-					opcode: 'pos_y',
-					blockType: BlockType.REPORTER,
-					text: FormPos_YText[this._locale]
-				},
-				{
-					opcode: 'pos_z',
-					blockType: BlockType.REPORTER,
-					text: FormPos_ZText[this._locale]
-				},
-				{
-					opcode: 'getPlayerRotPit',
-					blockType: BlockType.COMMAND,
-					text: FormGetPlayerRotPit[this._locale]
-				},
-				{
-					opcode: 'pitch',
-					blockType: BlockType.REPORTER,
-					text: FormPitchText[this._locale]
-				},
-				{
-					opcode: 'rotation',
-					blockType: BlockType.REPORTER,
-					text: FormRotationText[this._locale]
-				},
-				{
-					opcode: 'ConnectServer',
-					text: FormConnectServer[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						HOST: {
-							type: ArgumentType.STRING,
-							defaultValue: HOST_DEFAULT,
-							description: 'host name'
-						}
-					}
-				},
-				{
-					opcode: 'setBlockData',
-					text: FormSetBlockIdData[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						}
-					}
-				},
-				{
-					opcode: 'drawLine',
-					text: FormDrawLine[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						X1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X1'
-						},
-						Y1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y1'
-						},
-						Z1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Coordinate Z1'
-						}
-					}
-				},
-				{
-					opcode: 'setBlocks',
-					text: FormSetBlocks[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						X1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X1'
-						},
-						Y1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y1'
-						},
-						Z1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Coordinate Z1'
-						}
-					}
-				},
-				{
-					opcode: 'drawText',
-					text: FormDrawText[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						ID1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Air'
-						},
-						Data1: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Air'
-						},
-						Text: {
-							type: ArgumentType.STRING,
-							defaultValue: 'Great!',
-							description: 'drawn text'
-						},
-						Font: {
-							type: ArgumentType.STRING,
-							menu: 'font',
-							defaultValue: MENU_FONTS[0],
-							description: 'Font Name'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						}
-					}
-				},
-				{
-					opcode: 'drawCircle',
-					text: FormDrawCircle[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						},
-						FR: {
-							type: ArgumentType.STRING,
-							menu: 'yesno',
-							defaultValue: MENU_YESNO[this._locale][0].text,
-							description: 'Whether fill up'
-						}
-					}
-				},
-				{
-					opcode: 'drawArc',
-					text: FormDrawArc[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Start: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'start of theta range'
-						},
-						End: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 180,
-							description: 'end of theta range'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'drawArcRadis',
-					text: FormDrawFan[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Start: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'start of theta range'
-						},
-						End: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 180,
-							description: 'end of theta range'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'drawEllipse',
-					text: FormDrawEllipse[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						Ratio_Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1.5,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Start: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'start of theta range'
-						},
-						End: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 180,
-							description: 'end of theta range'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'drawEgg',
-					text: FormDrawEgg[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'drawBall',
-					text: FormDrawBall[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						}
-					}
-				},
-				{
-					opcode: 'drawBallPart',
-					text: FormDrawBallPart[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Start_XR: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Range of XR'
-						},
-						End_XR: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 180,
-							description: 'Range of XR'
-						},
-						Start_ZR: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Range of ZR'
-						},
-						End_ZR: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 180,
-							description: 'Range of ZR'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'drawEggBall',
-					text: FormDrawEggBall[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'drawEllipseBall',
-					text: FormDrawEllipseBall[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						Ratio_Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0.5,
-							description: 'Radius R'
-						},
-						Ratio_Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1.5,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'drawEllipseBallPart',
-					text: FormDrawEllipseBallPart[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						ID: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1,
-							description: 'Stone'
-						},
-						Data: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Stone'
-						},
-						R: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Radius R'
-						},
-						Ratio_Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0.5,
-							description: 'Radius R'
-						},
-						Ratio_Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 1.5,
-							description: 'Radius R'
-						},
-						X: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate X'
-						},
-						Y: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 10,
-							description: 'Coordinate Y'
-						},
-						Z: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Coordinate Z'
-						},
-						Start_XR: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Range of XR'
-						},
-						End_XR: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 180,
-							description: 'Range of XR'
-						},
-						Start_ZR: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Range of ZR'
-						},
-						End_ZR: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 180,
-							description: 'Range of ZR'
-						},
-						Pit: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Pitch'
-						},
-						Rot: {
-							type: ArgumentType.NUMBER,
-							defaultValue: 0,
-							description: 'Rotation'
-						}
-					}
-				},
-				{
-					opcode: 'doSomething',
-					text: FormDoSomething[this._locale],
-					blockType: BlockType.COMMAND,
-					arguments: {
-						Args: {
-							type: ArgumentType.STRING,
-							defaultValue: FormDoSomethingMsgDefault[this._locale],
-							description: 'args to pass'
-						}
-					}
-				}
+        // constants
+        this.absoluteStr = 'absolute';
+        this.relativeStr = 'relative';
+        this.commandIntervalMsec = 200;
+    }
 
-			],
-			menus: {
-					mode: MENU_MODE[this._locale],
-					yesno: MENU_YESNO[this._locale],
-				    font: MENU_FONTS,
-					rotations: MENU_ROT[this._locale],
-					pitches: MENU_PITCH[this._locale],
-					blocks: MENU_BLOCKS[this._locale],
-					reds: MENU_REDS[this._locale],
-					decos: MENU_DECOS[this._locale],
-					wools: MENU_WOOLS[this._locale],
-					sglasss: MENU_SGLASSS[this._locale],
-					carpets: MENU_CARPETS[this._locale]
-			}
+    getInfo() {
+        return {
+            id: 'minecraft',
+            name: 'Minecraft',
+            blockIconURI: blockIconURI,
+            blocks: [
+                // Command
+                {
+                    opcode: 'chat',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.chat',
+                        default: '[TEXT]と言う',
+                        description: 'chat.'
+                    }),
+                    arguments: {
+                        TEXT: {
+                            type: ArgumentType.STRING,
+                            defaultValue: 'hello'
+                        }
+                    }
+                },
+                {
+                    opcode: 'setBlock',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.setBlock',
+                        default: '[BLOCK]ブロックを([STARTX],[STARTY],[STARTZ])に置く',
+                        description: 'setBlock.'
+                    }),
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.STRING,
+                            defaultValue: this.BUILDING_BLOCK_INFO[0].name
+                        },
+                        STARTX: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTY: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTZ: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        }
+                    }
+                },
+                {
+                    opcode: 'setBlocks',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.setBlocks',
+                        default: '[BLOCK]ブロックを([STARTX],[STARTY],[STARTZ])から([ENDX],[ENDY],[ENDZ])まで置く',
+                        description: 'setBlocks.'
+                    }),
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.STRING,
+                            defaultValue: this.BUILDING_BLOCK_INFO[0].name
+                        },
+                        STARTX: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTY: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTZ: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        ENDX: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '5'
+                        },
+                        ENDY: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '5'
+                        },
+                        ENDZ: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '5'
+                        }
+                    }
+                },
+                {
+                    opcode: 'resetAroundHere',
+                    text: formatMessage({
+                        id: 'minecraft.command.resetAroundHere',
+                        default: '周辺をリセット 範囲：[AREA]',
+                        description: 'clear Around Area'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        AREA: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '20'
+                        }
+                    }
+                },
+                {
+                    opcode: 'spawnEntity',
+                    text: formatMessage({
+                        id: 'minecraft.command.spawnEntity',
+                        default: '([STARTX],[STARTY],[STARTZ])に[ENTITY]を召喚する',
+                        description: 'spawn entity'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        STARTX: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTY: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTZ: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        ENTITY: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'ENTITY',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getPlayerPosition',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.getPlayerPosition',
+                        default: '現在位置を調べる',
+                        description: 'getPlayerPosition.'
+                    })
+                },
+                {
+                    opcode: 'teleport',
+                    text: formatMessage({
+                        id: 'minecraft.command.teleport',
+                        default: '([STARTX],[STARTY],[STARTZ])にテレポートする',
+                        description: 'teleport'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        STARTX: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTY: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTZ: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        }
+                    }
+                },
+                {
+                    opcode: 'searchBlock',
+                    text: formatMessage({
+                        id: 'minecraft.command.searchBlock',
+                        default: '([STARTX],[STARTY],[STARTZ])のブロックを調べる'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        STARTX: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTY: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTZ: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        }
+                    }
+                },
+                {
+                    opcode: 'changeWeather',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.changeWeather',
+                        default: '天気を[WEATHER]に変える'
+                    }),
+                    arguments: {
+                        WEATHER: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'WEATHER',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'changeGameMode',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.changeGameMode',
+                        default: '[GAMEMODE]にする'
+                    }),
+                    arguments: {
+                        GAMEMODE: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'GAMEMODE',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'changeDifficulty',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.changeDifficulty',
+                        default: '[DIFFICULTY]にする'
+                    }),
+                    arguments: {
+                        DIFFICULTY: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'DIFFICULTY',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'giveEnchant',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.giveEnchant',
+                        default: 'レベル[LEVEL]の[ENCHANT]を付与する'
+                    }),
+                    arguments: {
+                        LEVEL: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'LEVEL',
+                            defaultValue: 0
+                        },
+                        ENCHANT: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'ENCHANT',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'spawnParticle',
+                    text: formatMessage({
+                        id: 'minecraft.command.spawnParticle',
+                        default: '([STARTX],[STARTY],[STARTZ])から([ENDX],[ENDY],[ENDZ])まで速さ[SPEED]で[PARTICLE]を[COUNT]回発生させる',
+                        description: 'spawnParticle.'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        STARTX: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTY: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        STARTZ: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '0'
+                        },
+                        ENDX: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '5'
+                        },
+                        ENDY: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '5'
+                        },
+                        ENDZ: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '5'
+                        },
+                        SPEED: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 1
+                        },
+                        PARTICLE: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'PARTICLE',
+                            defaultValue: 0
+                        },
+                        COUNT: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 1
+                        }
+                    }
+                },
+                {
+                    opcode: 'setHost',
+                    blockType: BlockType.COMMAND,
+                    text: formatMessage({
+                        id: 'minecraft.command.setHost',
+                        default: '[TEXT]に接続する',
+                        description: 'connection host.'
+                    }),
+                    arguments: {
+                        TEXT: {
+                            type: ArgumentType.STRING,
+                            defaultValue: 'localhost'
+                        }
+                    }
+                },
+                // Boolean
+                {
+                    opcode: 'checkBlockType',
+                    text: formatMessage({
+                        id: 'minecraft.boolean.checkBlockType',
+                        default: '調べたブロックが[TARGETBLOCK]である'
+                    }),
+                    blockType: BlockType.BOOLEAN,
+                    arguments: {
+                        TARGETBLOCK: {
+                            type: ArgumentType.STRING,
+                            defaultValue: this.BUILDING_BLOCK_INFO[0].name
+                        }
+                    }
+                },
+                // Reporter.Position
+                {
+                    opcode: 'getPosX',
+                    text: 'X',
+                    blockType: BlockType.REPORTER
+                },
+                {
+                    opcode: 'getPosY',
+                    text: 'Y',
+                    blockType: BlockType.REPORTER
+                },
+                {
+                    opcode: 'getPosZ',
+                    text: 'Z',
+                    blockType: BlockType.REPORTER
+                },
+                {
+                    opcode: 'getSearchedBlock',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.getSearchedBlock',
+                        default: '調べたブロック'
+                    }),
+                    blockType: BlockType.REPORTER
+                },
+                // Reporter.Blocks
+                {
+                    opcode: 'getBuildingBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.buildingBlockInfo',
+                        default: '建築ブロック：[BLOCK]',
+                        description: 'name of minecraft blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'BUILDINGBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getDecorationBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.decorationBlockInfo',
+                        default: '装飾ブロック：[BLOCK]',
+                        description: 'name of minecraft decoration blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'DECORATIONBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getRedstoneBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.redstoneBlockInfo',
+                        default: 'レッドストーン：[BLOCK]',
+                        description: 'name of minecraft decoration blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'REDSTONEBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getTransportationBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.transportationBlockInfo',
+                        default: '移動：[BLOCK]',
+                        description: 'name of minecraft transportation blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'TRANSPORTATIONBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getMiscellaneousBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.miscellaneousBlockInfo',
+                        default: 'その他：[BLOCK]',
+                        description: 'name of minecraft miscellaneous blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'MISCELLANEOUSBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getFoodstuffsBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.foodstuffsBlockInfo',
+                        default: '食物：[BLOCK]',
+                        description: 'name of minecraft foodstuffs blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'FOODSTUFFSBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getToolsBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.toolsBlockInfo',
+                        default: 'ツール：[BLOCK]',
+                        description: 'name of minecraft tools blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'TOOLSBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getCombatBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.combatBlockInfo',
+                        default: '戦闘：[BLOCK]',
+                        description: 'name of minecraft combat blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'COMBATBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getBrewingBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.brewingBlockInfo',
+                        default: '醸造：[BLOCK]',
+                        description: 'name of minecraft brewing blocks.'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'BREWINGBLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'getExtraBlocks',
+                    text: formatMessage({
+                        id: 'minecraft.reporter.extraBlockInfo',
+                        default: 'エクストラ：[BLOCK]'
+                    }),
+                    blockType: BlockType.REPORTER,
+                    arguments: {
+                        BLOCK: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'EXTRABLOCK',
+                            defaultValue: 0
+                        }
+                    }
+                }
+            ],
+            menus: {
+                BUILDINGBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.BUILDING_BLOCK_INFO)
+                },
+                DECORATIONBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.DECORATION_BLOCK_INFO)
+                },
+                REDSTONEBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.REDSTONE_BLOCK_INFO)
+                },
+                TRANSPORTATIONBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.TRANSPORTATION_BLOCK_INFO)
+                },
+                MISCELLANEOUSBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.MISCELLANEOUS_BLOCK_INFO)
+                },
+                FOODSTUFFSBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.FOODSTUFFS_BLOCK_INFO)
+                },
+                TOOLSBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.TOOLS_BLOCK_INFO)
+                },
+                COMBATBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.COMBAT_BLOCK_INFO)
+                },
+                BREWINGBLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.BREWING_BLOCK_INFO)
+                },
+                EXTRABLOCK: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.EXTRA_BLOCK_INFO)
+                },
+                ENTITY: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.ENTITY_INFO)
+                },
+                WEATHER: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.WEATHER_TYPES)
+                },
+                GAMEMODE: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.GAMEMODES)
+                },
+                DIFFICULTY: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.DIFFICULTIES)
+                },
+                LEVEL: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.LEVELS)
+                },
+                ENCHANT: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.ENCHANTS)
+                },
+                PARTICLE: {
+                    acceptReporters: true,
+                    items: this._buildMenu(this.PARTICLE_INFO)
+                }
+            }
+        };
+    }
 
-		}
-	}
+    /* --------------------------------------
+    *************** Utility ****************
+    --------------------------------------- */
+    _sleep(msec) {
+        return new Promise(function (resolve) {
+            setTimeout(function () { resolve() }, msec);
+        })
+    }
 
+    /**
+     * Create data for a menu in scratch-blocks format, consisting of an array of objects with text and
+     * value properties. The text is a translated string, and the value is one-indexed.
+     * @param  {object[]} info - An array of info objects each having a name property.
+     * @return {array} - An array of objects with text and value properties.
+     * @private
+     */
+    _buildMenu(info) {
+        return info.map((entry, index) => {
+            const obj = {};
+            obj.text = entry.name;
+            obj.value = String(index);
+            return obj;
+        });
+    }
 
-	_setLocale () {
-		let now_locale = '';
-		switch (formatMessage.setup().locale){
-			case 'ja':
-				now_locale='ja';
-				break;
-			case 'ja-Hira':
-				now_locale='ja-Hira';
-				break;
-			case 'en':
-				now_locale='en';
-				break;
-			default:
-				now_locale='en';
-				break;
-		}
-		return now_locale;
-	}
+    /**
+     * An array of info about each drum.
+     * @type {object[]}
+     * @param {string} name - the translatable name to display in the drums menu.
+     * @param {string} blockID - the ID of the minecraft block.
+     */
+    get BUILDING_BLOCK_INFO() {
+        return BlockInfo.genBuildingBlockInfo();
+    }
 
-	_nameToId (str) {
-		for(let j in BLOCKS){
-			for(let i=0; i<BLOCKS[j].length; i++){
-				if(str == BLOCKS[j][i][2]){
-					return [ BLOCKS[j][i][0], BLOCKS[j][i][1] ];
-				}
-			}
-		}
-		return [null, null];
-	}
+    get DECORATION_BLOCK_INFO() {
+        return BlockInfo.genDecorationBlockInfo();
+    }
 
-	block_NameToID (args) {
-		return args.BlockName;
-	}
+    get REDSTONE_BLOCK_INFO() {
+        return BlockInfo.genRedStoneBlockInfo();
+    }
 
-	red_NameToID (args) {
-		return args.BlockName;
-	}
+    get TRANSPORTATION_BLOCK_INFO() {
+        return BlockInfo.genTransportationBlockInfo();
+    }
 
-	deco_NameToID (args) {
-		return args.BlockName;
-	}
+    get MISCELLANEOUS_BLOCK_INFO() {
+        return BlockInfo.genMiscellaneousBlockInfo();
+    }
+    get FOODSTUFFS_BLOCK_INFO() {
+        return BlockInfo.genFoodstuffsBlockInfo();
+    }
+    get TOOLS_BLOCK_INFO() {
+        return BlockInfo.genToolsBlockInfo();
+    }
+    get COMBAT_BLOCK_INFO() {
+        return BlockInfo.genCombatBlockInfo();
+    }
+    get BREWING_BLOCK_INFO() {
+        return BlockInfo.genBrewingBlockInfo();
+    }
 
-	wool_NameToID (args) {
-		return args.BlockName;
-	}
+    get EXTRA_BLOCK_INFO() {
+        return BlockInfo.genExtraBlockInfo();
+    }
+    get ENTITY_INFO() {
+        return EntityInfo.genEntityInfo();
+    }
 
-	sglass_NameToID (args) {
-		return args.BlockName;
-	}
+    get PARTICLE_INFO() {
+        return ParticleInfo.genParticleInfo();
+    }
 
-	carpet_NameToID (args) {
-		return args.BlockName;
-	}
+    get WEATHER_TYPES() {
+        return [
+            {
+                name: formatMessage({
+                    id: 'minecraft.clear',
+                    default: '晴れ'
+                }),
+                weather: 'clear'
+            },
+            {
+                name: formatMessage({
+                    id: 'minecraft.rain',
+                    default: '雨'
+                }),
+                weather: 'rain'
+            },
+            {
+                name: formatMessage({
+                    id: 'minecraft.thunder',
+                    default: '雷'
+                }),
+                weather: 'thunder'
+            }];
+    }
 
-	SetMode (args) {
-		if(!args.MODE || args.MODE == MENU_MODE[this._locale][1].text){
-			this._world.setHelperMode_OFF();
-		} else {
-			this._world.setHelperMode_ON();
-		}
-	}
+    get GAMEMODES() {
+        return [
+            {
+                name: formatMessage({
+                    id: 'minecraft.survival',
+                    default: 'サバイバルモード'
+                }),
+                mode: 0
+            },
+            {
+                name: formatMessage({
+                    id: 'minecraft.creative',
+                    default: 'クリエイティブモード'
+                }),
+                mode: 1
+            },
+            {
+                name: formatMessage({
+                    id: 'minecraft.adventure',
+                    default: 'アドベンチャーモード'
+                }),
+                mode: 2
+            },
+            {
+                name: formatMessage({
+                    id: 'minecraft.spectator',
+                    default: 'スペクテイターモード'
+                }),
+                mode: 3
+            }
+        ];
+    }
 
-	Chat (args) {
-		this._world.Chat(args.MSG);
-	}
+    get DIFFICULTIES() {
+        return [
+            {
+                name: formatMessage({
+                    id: 'minecraft.peaceful',
+                    default: 'ピースフル'
+                }),
+                difficulty: 0
+            },
+            {
+                name: formatMessage({
+                    id: 'minecraft.easy',
+                    default: 'イージー'
+                }),
+                difficulty: 1
+            },
+            {
+                name: formatMessage({
+                    id: 'minecraft.normal',
+                    default: 'ノーマル'
+                }),
+                difficulty: 2
+            },
+            {
+                name: formatMessage({
+                    id: 'minecraft.hard',
+                    default: 'ハード'
+                }),
+                difficulty: 3
+            }
+        ];
+    }
 
-	setBlockData (args) {
-		this._world.setBlockData (args.ID, args.Data, args.X, args.Y, args.Z);
-	}
+    get LEVELS() {
+        return [
+            {
+                name: '1'
+            },
+            {
+                name: '2'
+            },
+            {
+                name: '3'
+            },
+            {
+                name: '4'
+            },
+            {
+                name: '5'
+            }
+        ];
+    }
 
-	pre_setBlockData (args) {
-		let data = this._nameToId(args.BlockName);
-		this.setBlockData({ID:data[0], Data:data[1], X:args.X, Y:args.Y, Z:args.Z});
-	}
+    get ENCHANTS() {
+        return Enchants.getEnchantInfo();
+    }
 
-	setBlocks (args) {
-		this._world.setBlocks(args.ID, args.Data, args.X, args.Y, args.Z, args.X1, args.Y1, args.Z1);
-	}
+    _createWebSocket() {
+        return new WebSocket("ws://" + this.host + ":14711");
+    }
 
-	pre_setBlocks (args) {
-		let data = this._nameToId(args.BlockName);
-		this.setBlocks({ID:data[0], Data:data[1], X:args.X, Y:args.Y, Z:args.Z, X1:args.X1, Y1:args.Y1, Z1:args.Z1});
-	}
+    async _checkState() {
+        await this._checkWebsocketState();
+        await this._checkExecTime();
+    }
 
-	drawLine (args) {
-		this._world.drawLine(args.ID, args.Data, args.X, args.Y, args.Z, args.X1, args.Y1, args.Z1);
-	}
+    async _checkExecTime() {
+        const elapsedTime = Date.now() - this.latestExecuteTime;
+        if (elapsedTime < this.commandIntervalMsec) {
+            await this._sleep(this.commandIntervalMsec - elapsedTime);
+        }
+    }
 
-	pre_drawLine (args) {
-		let data = this._nameToId(args.BlockName);
-		this.drawLine({ID:data[0], Data:data[1], X:args.X, Y:args.Y, Z:args.Z, X1:args.X1, Y1:args.Y1, Z1:args.Z1});
-	}
+    async _checkWebsocketState() {
+        return new Promise(((resolve, reject) => {
+            if (this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
+                this.ws = this._createWebSocket();
+                this.ws.onopen = function (e) {
+                    resolve();
+                }
+                this.ws.onerror = function (e) {
+                    reject();
+                }
+            } else {
+                resolve();
+            }
+        }));
+    }
 
-	drawCircle (args) {
-		this._world.drawCircle(args.ID, args.Data, args.R, args.X, args.Y, args.Z, args.Pit, args.Rot, args.FR);
-	}
+    async getPlayerIDAsync() {
+        await this._checkState();
+        return new Promise(((resolve, reject) => {
+            this.ws.send('world.getPlayerIds()');
+            this.ws.onmessage = function (e) {
+                const playerID = e.data.replace(/\r?\n/g, '');
+                this.latestExecuteTime = Date.now();
+                resolve(playerID);
+            };
+            this.ws.onerror = function (e) {
+                this.latestExecuteTime = Date.now();
+                reject();
+            }
+        }));
+    }
+    async updatePlayerPosAsync() {
+        await this._checkState();
+        const playerID = await this.getPlayerIDAsync();
+        return new Promise(((resolve, reject) => {
+            this.ws.send(`entity.getPos(${playerID})`);
+            this.ws.onmessage = function (e) {
+                const posX = e.data.split(',')[0];
+                const posY = e.data.split(',')[1];
+                const posZ = e.data.split(',')[2];
+                const stage = this.runtime.getTargetForStage();
+                stage.posX = Cast.toNumber(posX);
+                stage.posY = Cast.toNumber(posY);
+                stage.posZ = Cast.toNumber(posZ);
+                this.latestExecuteTime = Date.now();
+                resolve();
+            }.bind(this);
+            this.ws.onerror = function (e) {
+                this.latestExecuteTime = Date.now();
+                reject();
+            }
+        }));
+    }
 
-	pre_drawCircle (args) {
-		let data = this._nameToId(args.BlockName);
-		this.drawCircle({ID:data[0], Data:data[1], R:args.R, X:args.X, Y:args.Y, Z:args.Z, Pit:args.Pit, Rot:args.Rot, FR:args.FR});
-	}
+    _searchCoordinateMode(args) {
+        if (typeof args.STARTX === 'string' && args.STARTX.indexOf('~') !== -1) return this.relativeStr;
+        if (typeof args.STARTY === 'string' && args.STARTY.indexOf('~') !== -1) return this.relativeStr;
+        if (typeof args.STARTZ === 'string' && args.STARTZ.indexOf('~') !== -1) return this.relativeStr;
+        if (typeof args.ENDX === 'string' && args.ENDX.indexOf('~') !== -1) return this.relativeStr;
+        if (typeof args.ENDY === 'string' && args.ENDY.indexOf('~') !== -1) return this.relativeStr;
+        if (typeof args.ENDZ === 'string' && args.ENDZ.indexOf('~') !== -1) return this.relativeStr;
 
-	Teleport (args) {
-		this._world.Teleport(args.X, args.Y, args.Z);
-	}
+        return this.absoluteStr;
+    }
 
-	ResetHere (args) {
-		this._world.ResetHere();
-	}
+    async _sendCommand(command) {
+        await this._checkState();
+        return new Promise(((resolve, reject) => {
+            this.ws.send(command);
+            this.latestExecuteTime = Date.now();
+            resolve();
+            this.ws.onerror = function (e) {
+                this.latestExecuteTime = Date.now();
+                reject();
+            };
+        }));
+    }
 
-	Reset (args) {
-		this._world.Reset();
-	}
+    _convertStartPosToRelative(args) {
+        let startRelCoord = new Object();
+        const stage = this.runtime.getTargetForStage();
+        startRelCoord.X = typeof args.STARTX === 'string' ? Cast.toNumber(stage.posX) + Cast.toNumber(args.STARTX.split('~')[1]) : Cast.toNumber(args.STARTX);
+        startRelCoord.Y = typeof args.STARTY === 'string' ? Cast.toNumber(stage.posY) + Cast.toNumber(args.STARTY.split('~')[1]) : Cast.toNumber(args.STARTY);
+        startRelCoord.Z = typeof args.STARTZ === 'string' ? Cast.toNumber(stage.posZ) + Cast.toNumber(args.STARTZ.split('~')[1]) : Cast.toNumber(args.STARTZ);
+        return startRelCoord;
+    }
 
-	ConnectServer (args) {
-		this._world.ConnectServer(args.HOST);
-	}
+    _convertEndPosToRelative(args) {
+        let endRelCoord = new Object();
+        const stage = this.runtime.getTargetForStage();
+        endRelCoord.X = typeof args.ENDX === 'string' ? Cast.toNumber(stage.posX) + Cast.toNumber(args.ENDX.split('~')[1]) : Cast.toNumber(args.ENDX);
+        endRelCoord.Y = typeof args.ENDY === 'string' ? Cast.toNumber(stage.posY) + Cast.toNumber(args.ENDY.split('~')[1]) : Cast.toNumber(args.ENDY);
+        endRelCoord.Z = typeof args.ENDZ === 'string' ? Cast.toNumber(stage.posZ) + Cast.toNumber(args.ENDZ.split('~')[1]) : Cast.toNumber(args.ENDZ);
+        return endRelCoord;
+    }
 
-	getPlayerPos () {
-		this._world.getPlayerPos();
-	}
+    _findBlockInfo(block) {
+        let blockID = null;
+        let blockData = null;
+        if (typeof block === 'string') {
+            const targetBlock = this.BUILDING_BLOCK_INFO.find((b) => b.name === block)
+            blockID = targetBlock.blockID;
+            blockData = targetBlock.blockData;
+        } else {
+            blockID = block.blockID;
+            blockData = block.blockData;
+        }
+        return [blockID, blockData];
+    }
 
-	getBlockInfo (args) {
-		this._world.getBlockInfo(args.X, args.Y, args.Z);
-	}
+    _findEntityInfo(entityName) {
+        let entity = null;
+        if (typeof entityName === 'string' && Number.isNaN(Cast.toNumber(entityName))) {
+            const targetEntity = this.ENTITY_INFO.find((e) => e.name === entityName);
+            entity = targetEntity.entityName;
+        } else {
+            const index = Cast.toNumber(entityName);
+            entity = this.ENTITY_INFO[index].entityName;
+        }
+        return entity;
+    }
 
-	getPlayerRotPit () {
-		this._world.getPlayerRotPit();
-	}
+    _findParticleInfo(particleName) {
+        let particle = null;
+        if (typeof particleName === 'string' && Number.isNaN(Cast.toNumber(particleName))) {
+            const targetParticle = this.PARTICLE_INFO.find((e) => e.name === particleName);
+            particle = targetParticle.particleName;
+        } else {
+            const index = Cast.toNumber(particleName);
+            particle = this.PARTICLE_INFO[index].particleName;
+        }
+        return particle;
+    }
 
-	setPlayerRotPit (args) {
-		this._world.setPlayerRotPit(args.Rot, args.Pit);
-	}
+    /* --------------------------------------
+    *************** REPORTER ****************
+    --------------------------------------- */
+    getBuildingBlocks(args) {
+        return this.BUILDING_BLOCK_INFO[args.BLOCK];
+    }
 
-	status () {
-		return this._world.r_status;
-	}
+    getDecorationBlocks(args) {
+        return this.DECORATION_BLOCK_INFO[args.BLOCK];
+    }
 
-	blockId () {
-		return this._world.r_blockId;
-	}
+    getRedstoneBlocks(args) {
+        return this.REDSTONE_BLOCK_INFO[args.BLOCK];
+    }
 
-	blockData () {
-		return this._world.r_blockData;
-	}
+    getTransportationBlocks(args) {
+        return this.TRANSPORTATION_BLOCK_INFO[args.BLOCK];
+    }
 
-	pos_x () {
-		return this._world.r_pos_x;
-	}
+    getMiscellaneousBlocks(args) {
+        return this.MISCELLANEOUS_BLOCK_INFO[args.BLOCK];
+    }
+    getFoodstuffsBlocks(args) {
+        return this.FOODSTUFFS_BLOCK_INFO[args.BLOCK];
+    }
+    getToolsBlocks(args) {
+        return this.TOOLS_BLOCK_INFO[args.BLOCK];
+    }
+    getCombatBlocks(args) {
+        return this.COMBAT_BLOCK_INFO[args.BLOCK];
+    }
+    getBrewingBlocks(args) {
+        return this.BREWING_BLOCK_INFO[args.BLOCK];
+    }
+    getExtraBlocks(args) {
+        return this.EXTRA_BLOCK_INFO[args.BLOCK];
+    }
 
-	pos_y () {
-		return this._world.r_pos_y;
-	}
+    getPosX() {
+        const stage = this.runtime.getTargetForStage();
+        if (stage) {
+            return stage.posX;
+        }
+        return 0;
+    }
+    getPosY() {
+        const stage = this.runtime.getTargetForStage();
+        if (stage) {
+            return stage.posY;
+        }
+        return 0;
+    }
+    getPosZ() {
+        const stage = this.runtime.getTargetForStage();
+        if (stage) {
+            return stage.posZ;
+        }
+        return 0;
+    }
 
-	pos_z () {
-		return this._world.r_pos_z;
-	}
+    getSearchedBlock() {
+        const targetBlock = this.BUILDING_BLOCK_INFO.find(b => b.blockID === this.searchBlockID && b.blockData === this.searchBlockData);
+        if (typeof targetBlock === 'undefined') {
+            return '不明';
+        }
+        return targetBlock.name;
+    }
 
-	pitch () {
-		return this._world.r_pitch;
-	}
+    /* --------------------------------------
+    *************** COMMAND ****************
+    --------------------------------------- */
+    setHost(args) {
+        this.host = args.TEXT;
+    }
 
-	rotation () {
-		return this._world.r_rotation;
-	}
+    async setBlock(args) {
+        const coordinateMode = this._searchCoordinateMode(args);
+        if (coordinateMode === this.absoluteStr) {
+            await this._setBlockToAbsCoord(args);
+        } else if (coordinateMode === this.relativeStr) {
+            await this._setBlockToRelativeCoord(args);
+        }
+    }
 
-	setPen (args) {
-		return this._world.setPen(args.X, args.Y, args.Z, args.Pit, args.Rot);
-	}
+    async _setBlockToAbsCoord(args) {
+        const [blockID, blockData] = this._findBlockInfo(args.BLOCK);
+        const command = `world.setBlock(${Math.trunc(args.STARTX)},${Math.trunc(args.STARTY)},${Math.trunc(args.STARTZ)},${blockID},${blockData})`;
+        await this._sendCommand(command);
+    }
 
-	downPen (args) {
-		let data = this._nameToId(args.BlockName);
-		return this._world.downPen(data[0], data[1]);
-	}
+    async _setBlockToRelativeCoord(args) {
+        const [blockID, blockData] = this._findBlockInfo(args.BLOCK);
+        await this.updatePlayerPosAsync();
+        const relCoord = this._convertStartPosToRelative(args);
+        const command = `world.setBlock(${Math.trunc(relCoord.X)},${Math.trunc(relCoord.Y)},${Math.trunc(relCoord.Z)},${blockID},${blockData})`;
+        await this._sendCommand(command);
+    }
 
-	strokePen (args) {
-		return this._world.strokePen(args.Length);
-	}
+    async setBlocks(args) {
+        const coordinateMode = this._searchCoordinateMode(args);
+        if (coordinateMode === this.absoluteStr) {
+            await this._setBlocksToAbsCoord(args);
+        } else if (coordinateMode === this.relativeStr) {
+            await this._setBlocksToRelativeCoord(args);
+        }
+    }
 
-	turnPen (args) {
-		return this._world.turnPen(args.Pit, args.Rot);
-	}
+    async resetAroundHere(args) {
+        await this.updatePlayerPosAsync();
+        let newArgs = new Object();
+        newArgs.STARTX = '~-' + args.AREA;
+        newArgs.STARTY = '~';
+        newArgs.STARTZ = '~-' + args.AREA;
+        newArgs.ENDX = '~' + args.AREA;
+        newArgs.ENDY = '~' + args.AREA;
+        newArgs.ENDZ = '~' + args.AREA;
+        // air
+        block = new Object();
+        block.blockID = 0;
+        block.blockData = 0;
+        newArgs.BLOCK = block;
+        await this._setBlocksToRelativeCoord(newArgs);
+    }
 
-	upPen () {
-		return this._world.upPen();
-	}
+    async _setBlocksToAbsCoord(args) {
+        const [blockID, blockData] = this._findBlockInfo(args.BLOCK);
+        const command = `world.setBlocks(${Math.trunc(args.STARTX)},${Math.trunc(args.STARTY)},${Math.trunc(args.STARTZ)},${Math.trunc(args.ENDX)},${Math.trunc(args.ENDY)},${Math.trunc(args.ENDZ)},${blockID},${blockData})`;
+        await this._sendCommand(command);
+    }
 
-	drawText (args) {
-		return this._world.drawText(args.Text, args.Font, args.ID, args.Data, args.ID1, args.Data1, args.Rot, args.X, args.Y, args.Z);
-	}
+    async _setBlocksToRelativeCoord(args) {
+        const [blockID, blockData] = this._findBlockInfo(args.BLOCK);
+        await this.updatePlayerPosAsync();
+        const startRelCoord = this._convertStartPosToRelative(args);
+        const endRelCoord = this._convertEndPosToRelative(args);
+        const command = `world.setBlocks(${Math.trunc(startRelCoord.X)},${Math.trunc(startRelCoord.Y)},${Math.trunc(startRelCoord.Z)},${Math.trunc(endRelCoord.X)},${Math.trunc(endRelCoord.Y)},${Math.trunc(endRelCoord.Z)},${blockID},${blockData})`;
+        await this._sendCommand(command);
+    }
 
-	pre_drawText (args) {
-		let data = this._nameToId(args.BlockName);
-		let data1 = this._nameToId(args.BlockName1);
-		return this.drawText({Text:args.Text, Font:args.Font, X:args.X, Y:args.Y, Z:args.Z, Rot:0, ID:data[0], Data:data[1], ID1:data1[0], Data1:data1[1]});
-	}
+    async chat(args) {
+        const command = "chat.post(" + args.TEXT + ")";
+        await this._sendCommand(command);
+    }
 
-	drawArc (args) {
-		this._world.drawArc(args.ID, args.Data, args.R, args.X, args.Y, args.Z, args.Start, args.End, args.Pit, args.Rot);
-	}
+    async getPlayerPosition() {
+        await this.updatePlayerPosAsync();
+    }
 
-	drawArcRadis (args) {
-		this._world.drawArcRadis(args.ID, args.Data, args.R, args.X, args.Y, args.Z, args.Start, args.End, args.Pit, args.Rot);
-	}
+    async spawnEntity(args) {
+        const coordinateMode = this._searchCoordinateMode(args);
+        if (coordinateMode === this.absoluteStr) {
+            await this._spawnEntityToAbsCoord(args);
+        } else if (coordinateMode === this.relativeStr) {
+            await this._spawnEntityToRelativeCoord(args);
+        }
+    }
 
-	drawEllipse (args) {
-		this._world.drawEllipse(args.ID, args.Data, args.R, args.Ratio_Z, args.X, args.Y, args.Z, args.Start, args.End, args.Pit, args.Rot);
-	}
+    async _spawnEntityToAbsCoord(args) {
+        const entityName = this._findEntityInfo(args.ENTITY);
+        const command = `world.spawnEntity(${entityName},${Math.trunc(args.STARTX)},${Math.trunc(args.STARTY)},${Math.trunc(args.STARTZ)})`;
+        await this._sendCommand(command);
+    }
 
-	drawEgg (args) {
-		this._world.drawEgg(args.ID, args.Data, args.R, args.X, args.Y, args.Z, args.Pit, args.Rot);
-	}
+    async _spawnEntityToRelativeCoord(args) {
+        const entityName = this._findEntityInfo(args.ENTITY);
+        await this.updatePlayerPosAsync();
+        const relCoord = this._convertStartPosToRelative(args);
+        const command = `world.spawnEntity(${entityName},${Math.trunc(relCoord.X)},${Math.trunc(relCoord.Y)},${Math.trunc(relCoord.Z)})`;
+        await this._sendCommand(command);
+    }
 
-	drawBall (args) {
-		this._world.drawBall(args.ID, args.Data, args.R, args.X, args.Y, args.Z);
-	}
+    async teleport(args) {
+        const coordinateMode = this._searchCoordinateMode(args);
+        if (coordinateMode === this.absoluteStr) {
+            await this._teleportToAbsCoord(args);
+        } else if (coordinateMode === this.relativeStr) {
+            await this._teleportToRelativeCoord(args);
+        }
+    }
 
-	drawBallPart (args) {
-		this._world.drawBallPart(args.ID, args.Data, args.R, args.X, args.Y, args.Z, args.Start_XR, args.End_XR, args.Start_ZR, args.End_ZR, args.Pit, args.Rot);
-	}
+    async _teleportToAbsCoord(args) {
+        const playerID = await this.getPlayerIDAsync();
+        const command = `entity.setPos(${playerID},${Math.trunc(args.STARTX)},${Math.trunc(args.STARTY)},${Math.trunc(args.STARTZ)})`;
+        await this._sendCommand(command);
+    }
 
-	drawEggBall (args) {
-		this._world.drawEggBall(args.ID, args.Data, args.R, args.X, args.Y, args.Z, args.Pit, args.Rot);
-	}
+    async _teleportToRelativeCoord(args) {
+        const playerID = await this.getPlayerIDAsync();
+        await this.updatePlayerPosAsync();
+        const relCoord = this._convertStartPosToRelative(args);
+        const command = `entity.setPos(${playerID},${Math.trunc(relCoord.X)},${Math.trunc(relCoord.Y)},${Math.trunc(relCoord.Z)})`;
+        await this._sendCommand(command);
+    }
 
-	drawEllipseBall (args) {
-		this._world.drawEllipseBall(args.ID, args.Data, args.R, args.Ratio_Y, args.Ratio_Z, args.X, args.Y, args.Z, args.Pit, args.Rot);
-	}
+    async searchBlock(args) {
+        const coordinateMode = this._searchCoordinateMode(args);
+        if (coordinateMode === this.absoluteStr) {
+            await this._searchBlockToAbsCoord(args);
+        } else if (coordinateMode === this.relativeStr) {
+            await this._searchBlockToRelativeCoord(args);
+        }
+    }
 
-	drawEllipseBallPart (args) {
-		this._world.drawEllipseBallPart(args.ID, args.Data, args.R, args.Ratio_Y, args.Ratio_Z, args.X, args.Y, args.Z, args.Start_XR, args.End_XR, args.Start_ZR, args.End_ZR, args.Pit, args.Rot);
-	}
+    async _searchBlockToAbsCoord(args) {
+        await this._checkState();
+        return new Promise(((resolve, reject) => {
+            this.ws.send(`world.getBlockWithData(${args.STARTX},${args.STARTY},${args.STARTZ})`);
+            this.ws.onmessage = function (e) {
+                const actualBlock = e.data.replace(/\r?\n/g, "");
+                this.searchBlockID = actualBlock.split(',')[0];
+                this.searchBlockData = actualBlock.split(',')[1];
+                this.latestExecuteTime = Date.now();
+                resolve();
+            }.bind(this);
+            this.ws.onerror = function (e) {
+                this.latestExecuteTime = Date.now();
+                reject();
+            }
+        }));
+    }
 
-	doSomething (args) {
-		this._world.doSomething(args.Args);
-	}
+    async _searchBlockToRelativeCoord(args) {
+        await this.updatePlayerPosAsync();
+        const relCoord = this._convertStartPosToRelative(args);
+        let newArgs = new Object();
+        newArgs.STARTX = Cast.toString(Math.trunc(relCoord.X));
+        newArgs.STARTY = Cast.toString(Math.trunc(relCoord.Y));
+        newArgs.STARTZ = Cast.toString(Math.trunc(relCoord.Z));
+        await this._searchBlockToAbsCoord(newArgs);
+    }
+
+    checkBlockType(args) {
+        const targetBlock = typeof args.TARGETBLOCK === 'string' ? args.TARGETBLOCK : args.TARGETBLOCK.name;
+        return targetBlock === this.getSearchedBlock();
+    }
+
+    async changeWeather(args) {
+        const weather = this.WEATHER_TYPES[args.WEATHER].weather;
+        const command = `world.changeWeather(${weather})`;
+        await this._sendCommand(command);
+    }
+
+    async changeGameMode(args) {
+        const gamemode = this.GAMEMODES[args.GAMEMODE].mode;
+        const command = `world.changeGameMode(${gamemode})`;
+        await this._sendCommand(command);
+    }
+
+    async changeDifficulty(args) {
+        const difficulty = this.DIFFICULTIES[args.DIFFICULTY].difficulty;
+        const command = `world.changeDifficulty(${difficulty})`;
+        await this._sendCommand(command);
+    }
+
+    async giveEnchant(args) {
+        const level = this.LEVELS[args.LEVEL].name;
+        const enchantId = this.ENCHANTS[args.ENCHANT].id;
+        const command = `giveEnchant(${enchantId},${level})`;
+        await this._sendCommand(command);
+    }
+
+    async spawnParticle(args) {
+        const coordinateMode = this._searchCoordinateMode(args);
+        if (coordinateMode === this.absoluteStr) {
+            await this._spawnParticleToAbsCoord(args);
+        } else if (coordinateMode === this.relativeStr) {
+            await this._spawnParticleToRelativeCoord(args);
+        }
+    }
+
+    async _spawnParticleToAbsCoord(args) {
+        const particleName = this._findParticleInfo(args.PARTICLE);
+        const command = `world.spawnParticle(${particleName},${Math.trunc(args.STARTX)},${Math.trunc(args.STARTY)},${Math.trunc(args.STARTZ)},${Math.trunc(args.ENDX)},${Math.trunc(args.ENDY)},${Math.trunc(args.ENDZ)},${args.SPEED},${args.COUNT})`;
+        await this._sendCommand(command);
+    }
+
+    async _spawnParticleToRelativeCoord(args) {
+        const particleName = this._findParticleInfo(args.PARTICLE);
+        await this.updatePlayerPosAsync();
+        const startRelCoord = this._convertStartPosToRelative(args);
+        const endRelCoord = this._convertEndPosToRelative(args);
+        const command = `world.spawnParticle(${particleName},${Math.trunc(startRelCoord.X)},${Math.trunc(startRelCoord.Y)},${Math.trunc(startRelCoord.Z)},${Math.trunc(endRelCoord.X)},${Math.trunc(endRelCoord.Y)},${Math.trunc(endRelCoord.Z)},${args.SPEED},${args.COUNT})`;
+        await this._sendCommand(command);
+    }
 
 }
  
