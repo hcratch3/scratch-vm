@@ -24,6 +24,7 @@ const builtinExtensions = {
     makeymakey: () => require('../extensions/scratch3_makeymakey'),
     boost: () => require('../extensions/scratch3_boost'),
     raspberryjammod: () => require('../extensions/scratch3_raspberryjammod'),
+    raspberryjammod: () => require('../extensions/scratch3_webgl'),
     gdxfor: () => require('../extensions/scratch3_gdx_for')
 };
 
