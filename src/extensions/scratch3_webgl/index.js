@@ -52,7 +52,7 @@ class Scratch3WebGLController {
                     text: 'set background color [COLOR]',
                     arguments: {
                         COLOR: {
-                            type: ArgumentType.STRING,
+                            type: ArgumentType.COLOR,
                             defaultValue: '#0000ff' // 青色
                         }
                     }
