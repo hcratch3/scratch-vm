@@ -3,7 +3,6 @@ const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const log = require('../../util/log');
 
-
 class EarthquakeAlertExtension {
     constructor() {
         this.earthquakeData = null;  // 最新の地震データ
