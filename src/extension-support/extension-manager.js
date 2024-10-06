@@ -25,6 +25,7 @@ const builtinExtensions = {
     boost: () => require('../extensions/scratch3_boost'),
     raspberryjammod: () => require('../extensions/scratch3_raspberryjammod'),
     webgl: () => require('../extensions/scratch3_webgl'),
+    earthquake: () => require('../extensions/scratch3_earthquake'),
     gdxfor: () => require('../extensions/scratch3_gdx_for')
 };
 
