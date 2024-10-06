@@ -139,4 +139,4 @@ class EarthquakeAlertExtension {
     getOriginalText() { return this.earthquakeData?.originalText || 'No data'; }
 }
 
-Scratch.extensions.register(new EarthquakeAlertExtension());
+module.exports = EarthquakeAlertExtension();
