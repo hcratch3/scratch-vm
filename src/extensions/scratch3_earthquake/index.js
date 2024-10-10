@@ -75,8 +75,8 @@ class EarthquakeAlertExtension {
     // Scratchのブロック情報定義
     getInfo() {
         return {
-            id: 'earthquakeAlertExtension',
-            name: 'Earthquake Alert',
+            id: 'earthquake',
+            name: 'Earthquake',
             blocks: [
                 { opcode: 'getType', blockType: Scratch.BlockType.REPORTER, text: 'Get type' },
                 { opcode: 'getTitle', blockType: Scratch.BlockType.REPORTER, text: 'Get title' },
