@@ -4,7 +4,9 @@ const Cast = require('../../util/cast');
 const log = require('../../util/log');
 
 class EarthquakeAlertExtension {
-    constructor() {
+    constructor(runtime) {
+        this.runtime = runtime;
+        
         this.earthquakeData = null;  // 最新の地震データ
         this.connectWebSocket();     // WebSocket接続を開始
     }
